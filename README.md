@@ -1,3 +1,4 @@
+- Logging: configured logger writes to stdout and `logs/app.log` (set level via `LOG_LEVEL`, default INFO).
 # Form Validation Agent (FastAPI + LangChain)
 
 Backend-only template to validate form fields via a LangChain agent using OpenRouter (default `openai/gpt-oss-120b:free`). Exposes REST `POST /api/validate` and logs to Postgres. Includes Docker Compose and helper scripts.

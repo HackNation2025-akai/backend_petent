@@ -4,10 +4,10 @@ from __future__ import annotations
 import json
 from typing import Literal
 
-from pydantic import BaseModel, ValidationError
-
 from app.agent.config_loader import config_loader
 from app.core.llm import get_llm
+from app.core.logging import logger
+from pydantic import BaseModel, ValidationError
 
 class AgentResult(BaseModel):
     status: Literal["success", "objection"]
@@ -22,11 +22,14 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
     if not value.strip():
         return AgentResult(status="objection", justification="Value is empty. Please provide a value.")
 
+    logger.info("Validation start field=%s len=%d", field_type, len(value))
+
     llm = get_llm()
     messages = config_loader.build_messages(field_type, value, context)
     if not messages:
         return AgentResult(status="objection", justification="Unsupported field type.")
 
+    logger.debug("LLM payload: %s", messages[-1].content)
     response = await llm.ainvoke(messages)
     raw_content = response.content
     if not isinstance(raw_content, str):
@@ -34,6 +37,7 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
             raw_content = json.dumps(raw_content)
         except Exception:  # noqa: BLE001
             raw_content = str(raw_content)
+    logger.debug("LLM raw response: %s", raw_content[:500])
 
     try:
         parsed = json.loads(raw_content)
@@ -59,6 +63,8 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
                 status="objection",
                 justification="Not a supported profession (only dentist or hairdresser).",
             )
+
+    logger.info("Validation result field=%s status=%s", field_type, result.status)
 
     return result
 
