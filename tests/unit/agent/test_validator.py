@@ -58,6 +58,16 @@ async def test_agent_malformed_response(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_agent_nonstring_response(monkeypatch):
+    fake_llm = _FakeLLM([{"status": "success", "message": "ok"}])
+    monkeypatch.setattr("app.agent.validator.get_llm", lambda: fake_llm)
+
+    result = await run_validation_agent("text", "Acme", None)
+    # Should not crash; will likely fail to parse JSON list -> objection with stringified content
+    assert result.status == "objection"
+
+
+@pytest.mark.asyncio
 async def test_agent_valid1_success(monkeypatch):
     fake_llm = _FakeLLM(json.dumps({"status": "success", "message": "ok"}))
     monkeypatch.setattr("app.agent.validator.get_llm", lambda: fake_llm)

@@ -71,11 +71,18 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
 
     response = await llm.ainvoke(messages)
     raw_content = response.content
+    if not isinstance(raw_content, str):
+        try:
+            raw_content = json.dumps(raw_content)
+        except Exception:  # noqa: BLE001
+            raw_content = str(raw_content)
 
     try:
         parsed = json.loads(raw_content)
+        if not isinstance(parsed, dict):
+            raise TypeError("LLM response is not an object")
         result = AgentResult(**parsed)
-    except (json.JSONDecodeError, ValidationError):
+    except (json.JSONDecodeError, ValidationError, TypeError):
         fallback_message = (raw_content or "No response from model.").strip()
         if len(fallback_message) > 200:
             fallback_message = fallback_message[:197] + "..."
