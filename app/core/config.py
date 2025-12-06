@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     app_name: str = "Form Validation Agent"
 
     openrouter_api_key: str = Field("dummy-key", alias="OPENROUTER_API_KEY")
-    openrouter_model: str = Field("openai/gpt-oss-120b:free", alias="OPENROUTER_MODEL")
+    openrouter_model: str = Field("google/gemma-3-27b-it:free", alias="OPENROUTER_MODEL")
     openrouter_base_url: str = Field("https://openrouter.ai/api/v1", alias="OPENROUTER_BASE_URL")
     referer: str = Field("http://localhost", alias="OPENROUTER_REFERER")
     x_title: str = Field("Form Validation Agent", alias="OPENROUTER_X_TITLE")

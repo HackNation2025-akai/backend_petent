@@ -43,16 +43,18 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
         parsed = json.loads(raw_content)
         if not isinstance(parsed, dict):
             raise TypeError("LLM response is not an object")
+        logger.debug("LLM parsed response dict: %s", parsed)
         result = AgentResult(**parsed)
     except (json.JSONDecodeError, ValidationError, TypeError):
-        fallback_message = (raw_content or "No response from model.").strip()
+        fallback_message = (raw_content or "Brak odpowiedzi modelu. Zwracam objection.").strip()
         if len(fallback_message) > 200:
             fallback_message = fallback_message[:197] + "..."
+        logger.debug("LLM parse fallback used. raw_content=%s fallback=%s", raw_content, fallback_message)
         result = AgentResult(status="objection", justification=fallback_message)
 
     # Enforce non-empty justification
     if not result.justification.strip():
-        result = AgentResult(status="objection", justification="Empty response from model.")
+        result = AgentResult(status="objection", justification="Brak odpowiedzi modelu. Zwracam objection.")
 
     # Enforce valid3 allowed classifications (only dentist/hairdresser)
     if field_type == "valid3" and result.status == "success":
@@ -65,6 +67,7 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
             )
 
     logger.info("Validation result field=%s status=%s", field_type, result.status)
+    logger.debug("Validation justification field=%s justification=%s", field_type, result.justification)
 
     return result
 

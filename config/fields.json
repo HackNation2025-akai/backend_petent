@@ -1,38 +1,70 @@
 {
+  "system_prompt": "You are a concise form-field reviewer for accident forms. You must ALWAYS return JSON with keys 'status' and 'justification'. If you are unsure, have no answer, or the input is empty, return an objection with a short Polish justification (<=200 chars). Never return empty content or any other format.",
   "fields": [
     {
-      "name": "valid1",
-      "description": "PESEL-like: exactly 11 digits (0-9 only).",
+      "name": "pesel_strict",
+      "description": "PESEL: dokładnie 11 cyfr.",
       "allowed_status": ["success", "objection"],
       "allowed_terms": [],
-      "prompt": "Validate that the value is exactly 11 digits (0-9). If not, objection with short justification.",
-      "example_context": "PESEL"
+      "prompt": "Sprawdź czy wartość to dokładnie 11 cyfr (0-9). Jeśli nie, zwróć objection z krótkim uzasadnieniem po polsku."
     },
     {
-      "name": "valid2",
-      "description": "Letters only (A-Z + Polish diacritics), first letter uppercase.",
+      "name": "name_proper",
+      "description": "Imię/Nazwisko: litery (PL), pierwsza litera wielka.",
       "allowed_status": ["success", "objection"],
       "allowed_terms": [],
-      "prompt": "Validate that the value contains only letters (A-Z with Polish diacritics) and starts with an uppercase letter. If not, objection with short justification.",
-      "example_context": "City name"
+      "prompt": "Sprawdź czy wartość zawiera tylko litery (w tym polskie) i zaczyna się wielką literą. Inaczej objection z krótkim powodem po polsku."
     },
     {
-      "name": "valid3",
-      "description": "Classify profession: dentist or hairdresser; otherwise objection.",
-      "allowed_status": ["success", "objection"],
-      "allowed_terms": ["dentist", "stomatolog", "dentysta", "hairdresser", "fryzjer"],
-      "prompt": "Classify the text into dentist or hairdresser. If neither applies, return objection and say it is not supported.",
-      "example_context": "Job description"
-    },
-    {
-      "name": "text",
-      "description": "Generic text field.",
+      "name": "city_proper",
+      "description": "Miejscowość: litery (PL), pierwsza litera wielka.",
       "allowed_status": ["success", "objection"],
       "allowed_terms": [],
-      "prompt": "Check if text is reasonable for a generic text field; if unclear, objection with hint.",
-      "example_context": "Generic description"
+      "prompt": "Sprawdź czy nazwa miejscowości zawiera tylko litery (w tym polskie) i zaczyna się wielką literą. Inaczej objection z krótkim powodem."
+    },
+    {
+      "name": "doc_number",
+      "description": "Seria i numer dokumentu tożsamości.",
+      "allowed_status": ["success", "objection"],
+      "allowed_terms": [],
+      "prompt": "Oceń, czy format wygląda na realny numer dokumentu (litery/cyfry, długość 5-12). Jeśli wygląda na losowy/za krótki/za długi, objection z krótkim powodem."
+    },
+    {
+      "name": "phone_digits",
+      "description": "Telefon: 7-15 cyfr.",
+      "allowed_status": ["success", "objection"],
+      "allowed_terms": [],
+      "prompt": "Sprawdź czy numer ma 7-15 cyfr. Spacje/kreski dopuszczalne, ale po usunięciu ma zostać 7-15 cyfr. Inaczej objection z powodem."
+    },
+    {
+      "name": "text_brief",
+      "description": "Krótki opis zdarzenia/instytucji.",
+      "allowed_status": ["success", "objection"],
+      "allowed_terms": [],
+      "prompt": "Sprawdź, czy tekst jest sensowny w kontekście pola (krótki opis, nazwa instytucji). Jeśli pusty, zbyt krótki (<3 znaki) lub losowy, objection z krótkim powodem."
+    },
+    {
+      "name": "text_detailed",
+      "description": "Szczegółowy opis zdarzenia/urazów.",
+      "allowed_status": ["success", "objection"],
+      "allowed_terms": [],
+      "prompt": "Sprawdź, czy opis jest zrozumiały i zawiera sensowne informacje o zdarzeniu/obrażeniach. Jeśli pusty, niezrozumiały lub zbyt krótki, objection z powodem i krótką sugestią."
     }
   ],
-  "system_prompt": "You are a concise form-field reviewer. Use the provided rules per field. Always return JSON with keys 'status' and 'justification'. status must be 'success' or 'objection'. justification must be a short explanation (<=200 chars)."
+  "field_mapping": {
+    "injured_person.pesel": "pesel_strict",
+    "reporter.pesel": "pesel_strict",
+    "injured_person.first_name": "name_proper",
+    "injured_person.last_name": "name_proper",
+    "injured_address.city": "city_proper",
+    "injured_person.document_number": "doc_number",
+    "injured_person.phone": "phone_digits",
+    "accident_info.accident_place": "text_brief",
+    "accident_info.first_aid_facility": "text_brief",
+    "accident_info.investigating_authority": "text_brief",
+    "accident_info.machine_description": "text_brief",
+    "accident_info.detailed_description": "text_detailed",
+    "accident_info.injuries_description": "text_detailed"
+  }
 }
 
