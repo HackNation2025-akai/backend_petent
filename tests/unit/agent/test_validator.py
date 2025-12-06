@@ -57,3 +57,49 @@ async def test_agent_malformed_response(monkeypatch):
     assert result.message
 
 
+@pytest.mark.asyncio
+async def test_agent_valid1_success(monkeypatch):
+    fake_llm = _FakeLLM(json.dumps({"status": "success", "message": "ok"}))
+    monkeypatch.setattr("app.agent.validator.get_llm", lambda: fake_llm)
+
+    result = await run_validation_agent("valid1", "12345678901", None)
+    assert result.status == "success"
+
+
+@pytest.mark.asyncio
+async def test_agent_valid1_fail(monkeypatch):
+    fake_llm = _FakeLLM(json.dumps({"status": "objection", "message": "needs 11 digits"}))
+    monkeypatch.setattr("app.agent.validator.get_llm", lambda: fake_llm)
+
+    result = await run_validation_agent("valid1", "abc", None)
+    assert result.status == "objection"
+    assert "11" in result.message or "digit" in result.message.lower()
+
+
+@pytest.mark.asyncio
+async def test_agent_valid2_success(monkeypatch):
+    fake_llm = _FakeLLM(json.dumps({"status": "success", "message": "ok"}))
+    monkeypatch.setattr("app.agent.validator.get_llm", lambda: fake_llm)
+
+    result = await run_validation_agent("valid2", "Łódź", None)
+    assert result.status == "success"
+
+
+@pytest.mark.asyncio
+async def test_agent_valid2_fail(monkeypatch):
+    fake_llm = _FakeLLM(json.dumps({"status": "objection", "message": "letters only"}))
+    monkeypatch.setattr("app.agent.validator.get_llm", lambda: fake_llm)
+
+    result = await run_validation_agent("valid2", "12City", None)
+    assert result.status == "objection"
+
+
+@pytest.mark.asyncio
+async def test_agent_valid3_classification(monkeypatch):
+    fake_llm = _FakeLLM(json.dumps({"status": "success", "message": "dentist"}))
+    monkeypatch.setattr("app.agent.validator.get_llm", lambda: fake_llm)
+
+    result = await run_validation_agent("valid3", "Gabinet stomatologiczny", None)
+    assert result.status == "success"
+
+

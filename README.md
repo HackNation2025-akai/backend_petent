@@ -49,6 +49,12 @@ source scripts/export_env.sh .env
   - Body: `{"field_type": "text", "value": "Acme Corp", "context": "Company description"}`
   - Response: `{"status": "success" | "objection", "message": "..." }`
 
+### Supported field types
+- `valid1`: expects 11 digits (PESEL-like). LLM decides success/objection based on digit-only + length rule.
+- `valid2`: letters only (A-Z + Polish diacritics), must start with uppercase. LLM enforces rule.
+- `valid3`: classify job/description into {dentist, hairdresser, other}. If not dentist/hairdresser → objection with hint.
+- Legacy/generic types remain: text, email, phone, number, select.
+
 ## OpenAPI export
 ```bash
 python scripts/export_openapi.py

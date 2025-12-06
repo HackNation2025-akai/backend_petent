@@ -8,16 +8,39 @@ from pydantic import BaseModel, ValidationError
 
 from app.core.llm import get_llm
 
-SUPPORTED_FIELD_TYPES = {"text", "email", "phone", "number", "select"}
+SUPPORTED_FIELD_TYPES = {
+    "text",
+    "email",
+    "phone",
+    "number",
+    "select",
+    "valid1",  # 11-digit numeric (PESEL-like)
+    "valid2",  # Letters (A-Z + PL diacritics), start with capital
+    "valid3",  # Profession classification: dentist, hairdresser, other
+}
+
+FIELD_RULES: dict[str, str] = {
+    "valid1": (
+        "Treat as PESEL-like: must be exactly 11 digits (0-9 only). "
+        "Return objection if not 11 digits or contains non-digits."
+    ),
+    "valid2": (
+        "Must contain only letters A-Z (case-insensitive) including Polish diacritics "
+        "(ą, ć, ę, ł, ń, ó, ś, ż, ź). Must start with an uppercase letter. "
+        "If any other characters or first letter not uppercase -> objection."
+    ),
+    "valid3": (
+        "Classify the text into one of: dentist, hairdresser, other. "
+        "If clearly dentist or hairdresser -> success. Otherwise -> objection with a brief hint."
+    ),
+}
 
 
 SYSTEM_PROMPT = (
-    "You are a concise form-field reviewer. Decide if a provided value fits its field type. "
-    "Always return a JSON object with keys 'status' and 'message'. "
-    "status must be either 'success' or 'objection'. "
-    "message is a short suggestion (<=200 chars). "
-    "If the value is unclear, incomplete, or ill-formatted for its type, use 'objection' "
-    "and recommend how to improve it."
+    "You are a concise form-field reviewer. Decide if a provided value fits its field type "
+    "using the supplied rules. Always return JSON with keys 'status' and 'message'. "
+    "status: 'success' or 'objection'. message: short suggestion (<=200 chars). "
+    "If the value is unclear or ill-formatted for its type, return 'objection' with a hint."
 )
 
 
@@ -38,6 +61,7 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
         "field_type": field_type,
         "value": value,
         "context": context or "",
+        "rules": FIELD_RULES.get(field_type, ""),
         "allowed_status": ["success", "objection"],
     }
     messages = [
