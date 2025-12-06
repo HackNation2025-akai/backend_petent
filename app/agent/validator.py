@@ -1,50 +1,13 @@
 from __future__ import annotations
+# ruff: noqa: I001
 
 import json
 from typing import Literal
 
-from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, ValidationError
 
+from app.agent.config_loader import config_loader
 from app.core.llm import get_llm
-
-SUPPORTED_FIELD_TYPES = {
-    "text",
-    "email",
-    "phone",
-    "number",
-    "select",
-    "valid1",  # 11-digit numeric (PESEL-like)
-    "valid2",  # Letters (A-Z + PL diacritics), start with capital
-    "valid3",  # Profession classification: dentist, hairdresser, other
-}
-
-FIELD_RULES: dict[str, str] = {
-    "valid1": (
-        "Treat as PESEL-like: must be exactly 11 digits (0-9 only). "
-        "Return objection if not 11 digits or contains non-digits. Always include a brief justification."
-    ),
-    "valid2": (
-        "Must contain only letters A-Z (case-insensitive) including Polish diacritics "
-        "(ą, ć, ę, ł, ń, ó, ś, ż, ź). Must start with an uppercase letter. "
-        "If any other characters or first letter not uppercase -> objection. Always include a brief justification."
-    ),
-    "valid3": (
-        "Classify the text into exactly one of: dentist, hairdresser. "
-        "If none of these apply, return objection and say it is not a supported profession. "
-        "Always include a brief justification."
-    ),
-}
-
-
-SYSTEM_PROMPT = (
-    "You are a concise form-field reviewer. Decide if a provided value fits its field type "
-    "using the supplied rules. Always return JSON with keys 'status' and 'message'. "
-    "status: 'success' or 'objection'. message: short suggestion (<=200 chars). "
-    "Always include a short justification in 'message'. "
-    "If the value is unclear or ill-formatted for its type, return 'objection' with a hint."
-)
-
 
 class AgentResult(BaseModel):
     status: Literal["success", "objection"]
@@ -53,23 +16,16 @@ class AgentResult(BaseModel):
 
 async def run_validation_agent(field_type: str, value: str, context: str | None = None) -> AgentResult:
     """Uruchamia agenta LangChain i zwraca wynik walidacji."""
-    if field_type not in SUPPORTED_FIELD_TYPES:
+    field_cfg = config_loader.get_field(field_type)
+    if not field_cfg:
         return AgentResult(status="objection", justification="Unsupported field type.")
     if not value.strip():
         return AgentResult(status="objection", justification="Value is empty. Please provide a value.")
 
     llm = get_llm()
-    payload = {
-        "field_type": field_type,
-        "value": value,
-        "context": context or "",
-        "rules": FIELD_RULES.get(field_type, ""),
-        "allowed_status": ["success", "objection"],
-    }
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=json.dumps(payload)),
-    ]
+    messages = config_loader.build_messages(field_type, value, context)
+    if not messages:
+        return AgentResult(status="objection", justification="Unsupported field type.")
 
     response = await llm.ainvoke(messages)
     raw_content = response.content
@@ -97,8 +53,8 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
     # Enforce valid3 allowed classifications (only dentist/hairdresser)
     if field_type == "valid3" and result.status == "success":
         msg_lower = result.justification.lower()
-        allowed = ("dentyst", "dentist", "stomatolog", "hairdresser", "fryz")
-        if not any(token in msg_lower for token in allowed):
+        allowed = [t.lower() for t in field_cfg.allowed_terms]
+        if allowed and not any(token in msg_lower for token in allowed):
             result = AgentResult(
                 status="objection",
                 justification="Not a supported profession (only dentist or hairdresser).",

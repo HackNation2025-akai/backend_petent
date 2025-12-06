@@ -1,0 +1,38 @@
+{
+  "fields": [
+    {
+      "name": "valid1",
+      "description": "PESEL-like: exactly 11 digits (0-9 only).",
+      "allowed_status": ["success", "objection"],
+      "allowed_terms": [],
+      "prompt": "Validate that the value is exactly 11 digits (0-9). If not, objection with short justification.",
+      "example_context": "PESEL"
+    },
+    {
+      "name": "valid2",
+      "description": "Letters only (A-Z + Polish diacritics), first letter uppercase.",
+      "allowed_status": ["success", "objection"],
+      "allowed_terms": [],
+      "prompt": "Validate that the value contains only letters (A-Z with Polish diacritics) and starts with an uppercase letter. If not, objection with short justification.",
+      "example_context": "City name"
+    },
+    {
+      "name": "valid3",
+      "description": "Classify profession: dentist or hairdresser; otherwise objection.",
+      "allowed_status": ["success", "objection"],
+      "allowed_terms": ["dentist", "stomatolog", "dentysta", "hairdresser", "fryzjer"],
+      "prompt": "Classify the text into dentist or hairdresser. If neither applies, return objection and say it is not supported.",
+      "example_context": "Job description"
+    },
+    {
+      "name": "text",
+      "description": "Generic text field.",
+      "allowed_status": ["success", "objection"],
+      "allowed_terms": [],
+      "prompt": "Check if text is reasonable for a generic text field; if unclear, objection with hint.",
+      "example_context": "Generic description"
+    }
+  ],
+  "system_prompt": "You are a concise form-field reviewer. Use the provided rules per field. Always return JSON with keys 'status' and 'justification'. status must be 'success' or 'objection'. justification must be a short explanation (<=200 chars)."
+}
+

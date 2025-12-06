@@ -1,7 +1,9 @@
 import json
+from pathlib import Path
 
 import pytest
 
+from app.agent.config_loader import ConfigLoader
 from app.agent.validator import AgentResult, run_validation_agent
 
 
@@ -16,6 +18,15 @@ class _FakeLLM:
 
     async def ainvoke(self, _messages):
         return _FakeLLMResponse(self._content)
+
+
+@pytest.fixture(autouse=True)
+def reload_config(monkeypatch, tmp_path):
+    # Load test config to isolate from real file if needed
+    cfg_path = Path("config/fields.json")
+    loader = ConfigLoader(cfg_path)
+    monkeypatch.setattr("app.agent.validator.config_loader", loader)
+    yield
 
 
 @pytest.mark.asyncio

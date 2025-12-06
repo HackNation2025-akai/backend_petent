@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     x_title: str = Field("Form Validation Agent", alias="OPENROUTER_X_TITLE")
 
     database_url: str = Field("postgresql+asyncpg://app:app@db:5432/app", alias="DATABASE_URL")
+    base_dir: str = Field(default=".")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
