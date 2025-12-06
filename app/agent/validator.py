@@ -48,15 +48,15 @@ SYSTEM_PROMPT = (
 
 class AgentResult(BaseModel):
     status: Literal["success", "objection"]
-    message: str
+    justification: str
 
 
 async def run_validation_agent(field_type: str, value: str, context: str | None = None) -> AgentResult:
     """Uruchamia agenta LangChain i zwraca wynik walidacji."""
     if field_type not in SUPPORTED_FIELD_TYPES:
-        return AgentResult(status="objection", message="Unsupported field type.")
+        return AgentResult(status="objection", justification="Unsupported field type.")
     if not value.strip():
-        return AgentResult(status="objection", message="Value is empty. Please provide a value.")
+        return AgentResult(status="objection", justification="Value is empty. Please provide a value.")
 
     llm = get_llm()
     payload = {
@@ -88,20 +88,20 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
         fallback_message = (raw_content or "No response from model.").strip()
         if len(fallback_message) > 200:
             fallback_message = fallback_message[:197] + "..."
-        result = AgentResult(status="objection", message=fallback_message)
+        result = AgentResult(status="objection", justification=fallback_message)
 
     # Enforce non-empty justification
-    if not result.message.strip():
-        result = AgentResult(status="objection", message="Empty response from model.")
+    if not result.justification.strip():
+        result = AgentResult(status="objection", justification="Empty response from model.")
 
     # Enforce valid3 allowed classifications (only dentist/hairdresser)
     if field_type == "valid3" and result.status == "success":
-        msg_lower = result.message.lower()
+        msg_lower = result.justification.lower()
         allowed = ("dentyst", "dentist", "stomatolog", "hairdresser", "fryz")
         if not any(token in msg_lower for token in allowed):
             result = AgentResult(
                 status="objection",
-                message="Not a supported profession (only dentist or hairdresser).",
+                justification="Not a supported profession (only dentist or hairdresser).",
             )
 
     return result

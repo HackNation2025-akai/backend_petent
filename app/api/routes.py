@@ -16,6 +16,6 @@ async def validate_field(
 ) -> ValidationResponse:
     result = await run_validation_agent(payload.field_type, payload.value, payload.context)
     await log_validation(session, payload.field_type, payload.value, result)
-    return ValidationResponse(status=result.status, message=result.message)
+    return ValidationResponse(status=result.status, justification=result.justification)
 
 
