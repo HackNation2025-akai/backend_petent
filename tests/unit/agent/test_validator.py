@@ -113,3 +113,23 @@ async def test_agent_valid3_classification(monkeypatch):
     assert result.status == "success"
 
 
+@pytest.mark.asyncio
+async def test_agent_valid3_hairdresser(monkeypatch):
+    fake_llm = _FakeLLM(json.dumps({"status": "success", "message": "hairdresser"}))
+    monkeypatch.setattr("app.agent.validator.get_llm", lambda: fake_llm)
+
+    result = await run_validation_agent("valid3", "Salon fryzjerski", None)
+    assert result.status == "success"
+
+
+@pytest.mark.asyncio
+async def test_agent_valid3_other_forced_objection(monkeypatch):
+    # Model claims success but gives unsupported profession -> should be forced to objection
+    fake_llm = _FakeLLM(json.dumps({"status": "success", "message": "cook"}))
+    monkeypatch.setattr("app.agent.validator.get_llm", lambda: fake_llm)
+
+    result = await run_validation_agent("valid3", "Kucharz", None)
+    assert result.status == "objection"
+    assert "not a supported" in result.message.lower()
+
+

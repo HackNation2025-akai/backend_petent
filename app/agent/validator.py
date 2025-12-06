@@ -22,16 +22,17 @@ SUPPORTED_FIELD_TYPES = {
 FIELD_RULES: dict[str, str] = {
     "valid1": (
         "Treat as PESEL-like: must be exactly 11 digits (0-9 only). "
-        "Return objection if not 11 digits or contains non-digits."
+        "Return objection if not 11 digits or contains non-digits. Always include a brief justification."
     ),
     "valid2": (
         "Must contain only letters A-Z (case-insensitive) including Polish diacritics "
         "(ą, ć, ę, ł, ń, ó, ś, ż, ź). Must start with an uppercase letter. "
-        "If any other characters or first letter not uppercase -> objection."
+        "If any other characters or first letter not uppercase -> objection. Always include a brief justification."
     ),
     "valid3": (
-        "Classify the text into one of: dentist, hairdresser, other. "
-        "If clearly dentist or hairdresser -> success. Otherwise -> objection with a brief hint."
+        "Classify the text into exactly one of: dentist, hairdresser. "
+        "If none of these apply, return objection and say it is not a supported profession. "
+        "Always include a brief justification."
     ),
 }
 
@@ -40,6 +41,7 @@ SYSTEM_PROMPT = (
     "You are a concise form-field reviewer. Decide if a provided value fits its field type "
     "using the supplied rules. Always return JSON with keys 'status' and 'message'. "
     "status: 'success' or 'objection'. message: short suggestion (<=200 chars). "
+    "Always include a short justification in 'message'. "
     "If the value is unclear or ill-formatted for its type, return 'objection' with a hint."
 )
 
@@ -87,6 +89,20 @@ async def run_validation_agent(field_type: str, value: str, context: str | None 
         if len(fallback_message) > 200:
             fallback_message = fallback_message[:197] + "..."
         result = AgentResult(status="objection", message=fallback_message)
+
+    # Enforce non-empty justification
+    if not result.message.strip():
+        result = AgentResult(status="objection", message="Empty response from model.")
+
+    # Enforce valid3 allowed classifications (only dentist/hairdresser)
+    if field_type == "valid3" and result.status == "success":
+        msg_lower = result.message.lower()
+        allowed = ("dentyst", "dentist", "stomatolog", "hairdresser", "fryz")
+        if not any(token in msg_lower for token in allowed):
+            result = AgentResult(
+                status="objection",
+                message="Not a supported profession (only dentist or hairdresser).",
+            )
 
     return result
 
