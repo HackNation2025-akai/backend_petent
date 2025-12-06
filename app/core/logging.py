@@ -4,8 +4,9 @@ import logging
 import os
 from pathlib import Path
 
-LOG_DIR = Path("logs")
-LOG_DIR.mkdir(exist_ok=True)
+ROOT_DIR = Path(__file__).resolve().parents[2]
+LOG_DIR = ROOT_DIR / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def setup_logger() -> logging.Logger:
@@ -22,9 +23,14 @@ def setup_logger() -> logging.Logger:
     stream.setFormatter(fmt)
     logger.addHandler(stream)
 
-    file_handler = logging.FileHandler(LOG_DIR / "app.log")
-    file_handler.setFormatter(fmt)
-    logger.addHandler(file_handler)
+    if os.getenv("LOG_TO_FILE", "1") == "1":
+        try:
+            file_handler = logging.FileHandler(LOG_DIR / "app.log")
+            file_handler.setFormatter(fmt)
+            logger.addHandler(file_handler)
+        except OSError as exc:
+            # Fall back silently if log file is not writable (e.g., mounted volume permissions)
+            logger.warning("File logging disabled: %s", exc)
 
     return logger
 
