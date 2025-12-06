@@ -6,8 +6,11 @@ from app.core.logging import logger
 from app.db.session import get_session
 from app.models.schemas import ValidationRequest, ValidationResponse
 from app.services.validation_log import log_validation
+from app.api import sessions, forms
 
 router = APIRouter()
+router.include_router(sessions.router)
+router.include_router(forms.router)
 
 
 @router.post("/validate", response_model=ValidationResponse)

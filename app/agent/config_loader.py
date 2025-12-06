@@ -32,11 +32,13 @@ class ConfigLoader:
         self.path = path
         self.system_prompt: str = ""
         self.fields: dict[str, FieldConfig] = {}
+        self.field_mapping: dict[str, str] = {}
         self._load()
 
     def _load(self) -> None:
         data = json.loads(self.path.read_text(encoding="utf-8"))
         self.system_prompt = data.get("system_prompt", "")
+        self.field_mapping = data.get("field_mapping", {})
         for item in data.get("fields", []):
             cfg = FieldConfig(
                 name=item["name"],
