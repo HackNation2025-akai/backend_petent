@@ -11,6 +11,6 @@ class ValidationRequest(BaseModel):
 
 class ValidationResponse(BaseModel):
     status: Literal["success", "objection"]
-    message: str
+    justification: str
 
 

@@ -11,7 +11,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:16
@@ -23,6 +24,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   pgadmin:
     image: dpage/pgadmin4:8
@@ -32,7 +39,8 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 

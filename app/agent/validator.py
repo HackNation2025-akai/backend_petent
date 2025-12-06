@@ -1,61 +1,70 @@
 from __future__ import annotations
+# ruff: noqa: I001
 
 import json
 from typing import Literal
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, ValidationError
-
+from app.agent.config_loader import config_loader
 from app.core.llm import get_llm
-
-SUPPORTED_FIELD_TYPES = {"text", "email", "phone", "number", "select"}
-
-
-SYSTEM_PROMPT = (
-    "You are a concise form-field reviewer. Decide if a provided value fits its field type. "
-    "Always return a JSON object with keys 'status' and 'message'. "
-    "status must be either 'success' or 'objection'. "
-    "message is a short suggestion (<=200 chars). "
-    "If the value is unclear, incomplete, or ill-formatted for its type, use 'objection' "
-    "and recommend how to improve it."
-)
-
+from app.core.logging import logger
+from pydantic import BaseModel, ValidationError
 
 class AgentResult(BaseModel):
     status: Literal["success", "objection"]
-    message: str
+    justification: str
 
 
 async def run_validation_agent(field_type: str, value: str, context: str | None = None) -> AgentResult:
     """Uruchamia agenta LangChain i zwraca wynik walidacji."""
-    if field_type not in SUPPORTED_FIELD_TYPES:
-        return AgentResult(status="objection", message="Unsupported field type.")
+    field_cfg = config_loader.get_field(field_type)
+    if not field_cfg:
+        return AgentResult(status="objection", justification="Unsupported field type.")
     if not value.strip():
-        return AgentResult(status="objection", message="Value is empty. Please provide a value.")
+        return AgentResult(status="objection", justification="Value is empty. Please provide a value.")
+
+    logger.info("Validation start field=%s len=%d", field_type, len(value))
 
     llm = get_llm()
-    payload = {
-        "field_type": field_type,
-        "value": value,
-        "context": context or "",
-        "allowed_status": ["success", "objection"],
-    }
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=json.dumps(payload)),
-    ]
+    messages = config_loader.build_messages(field_type, value, context)
+    if not messages:
+        return AgentResult(status="objection", justification="Unsupported field type.")
 
+    logger.debug("LLM payload: %s", messages[-1].content)
     response = await llm.ainvoke(messages)
     raw_content = response.content
+    if not isinstance(raw_content, str):
+        try:
+            raw_content = json.dumps(raw_content)
+        except Exception:  # noqa: BLE001
+            raw_content = str(raw_content)
+    logger.debug("LLM raw response: %s", raw_content[:500])
 
     try:
         parsed = json.loads(raw_content)
+        if not isinstance(parsed, dict):
+            raise TypeError("LLM response is not an object")
         result = AgentResult(**parsed)
-    except (json.JSONDecodeError, ValidationError):
+    except (json.JSONDecodeError, ValidationError, TypeError):
         fallback_message = (raw_content or "No response from model.").strip()
         if len(fallback_message) > 200:
             fallback_message = fallback_message[:197] + "..."
-        result = AgentResult(status="objection", message=fallback_message)
+        result = AgentResult(status="objection", justification=fallback_message)
+
+    # Enforce non-empty justification
+    if not result.justification.strip():
+        result = AgentResult(status="objection", justification="Empty response from model.")
+
+    # Enforce valid3 allowed classifications (only dentist/hairdresser)
+    if field_type == "valid3" and result.status == "success":
+        msg_lower = result.justification.lower()
+        allowed = [t.lower() for t in field_cfg.allowed_terms]
+        if allowed and not any(token in msg_lower for token in allowed):
+            result = AgentResult(
+                status="objection",
+                justification="Not a supported profession (only dentist or hairdresser).",
+            )
+
+    logger.info("Validation result field=%s status=%s", field_type, result.status)
 
     return result
 

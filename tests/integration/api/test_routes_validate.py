@@ -37,11 +37,27 @@ def stub_log(monkeypatch):
 @pytest.fixture
 def stub_agent(monkeypatch):
     async def _fake_agent(field_type, value, context=None):
-        if field_type not in {"text", "email", "phone", "number", "select"}:
-            return AgentResult(status="objection", message="unsupported")
+        supported = {"text", "email", "phone", "number", "select", "valid1", "valid2", "valid3"}
+        if field_type not in supported:
+            return AgentResult(status="objection", justification="unsupported")
+
+        if field_type == "valid1":
+            return AgentResult(status="success" if value.isdigit() else "objection", justification="ok")
+
+        if field_type == "valid2":
+            return AgentResult(status="success" if value and value[0].isalpha() else "objection", justification="ok")
+
+        if field_type == "valid3":
+            val = value.lower()
+            if "dent" in val:
+                return AgentResult(status="success", justification="dentist")
+            if "fryz" in val:
+                return AgentResult(status="success", justification="hairdresser")
+            return AgentResult(status="objection", justification="other")
+
         status = "success" if value else "objection"
-        message = "ok" if status == "success" else "value missing"
-        return AgentResult(status=status, message=message)
+        justification = "ok" if status == "success" else "value missing"
+        return AgentResult(status=status, justification=justification)
 
     monkeypatch.setattr(agent.validator, "run_validation_agent", _fake_agent)
     monkeypatch.setattr(routes, "run_validation_agent", _fake_agent)
@@ -55,7 +71,7 @@ async def test_validate_success(stub_agent):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "success"
-    assert body["message"]
+    assert body["justification"]
 
 
 @pytest.mark.asyncio
@@ -66,7 +82,7 @@ async def test_validate_objection(stub_agent):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "objection"
-    assert "value" in body["message"]
+    assert "value" in body["justification"]
 
 
 @pytest.mark.asyncio
@@ -77,5 +93,61 @@ async def test_validate_unsupported_type(stub_agent):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "objection"
+
+
+@pytest.mark.asyncio
+async def test_validate_valid1(stub_agent):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/api/validate", json={"field_type": "valid1", "value": "12345678901"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "success"
+    assert body["justification"]
+
+
+@pytest.mark.asyncio
+async def test_validate_valid2(stub_agent):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/api/validate", json={"field_type": "valid2", "value": "Warszawa"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "success"
+    assert body["justification"]
+
+
+@pytest.mark.asyncio
+async def test_validate_valid3(stub_agent):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/api/validate", json={"field_type": "valid3", "value": "Gabinet dentystyczny"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "success"
+    assert "dent" in body["justification"].lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_valid3_hairdresser(stub_agent):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/api/validate", json={"field_type": "valid3", "value": "Salon fryzjerski"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "success"
+    assert "hairdresser" in body["justification"].lower() or "fryz" in body["justification"].lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_valid3_other(stub_agent):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/api/validate", json={"field_type": "valid3", "value": "Kucharz w restauracji"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "objection"
+    assert "dent" not in body["justification"].lower()
+    assert "hairdresser" not in body["justification"].lower()
 
 

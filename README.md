@@ -1,3 +1,4 @@
+- Logging: configured logger writes to stdout and `logs/app.log` (set level via `LOG_LEVEL`, default INFO).
 # Form Validation Agent (FastAPI + LangChain)
 
 Backend-only template to validate form fields via a LangChain agent using OpenRouter (default `openai/gpt-oss-120b:free`). Exposes REST `POST /api/validate` and logs to Postgres. Includes Docker Compose and helper scripts.
@@ -34,6 +35,9 @@ source scripts/export_env.sh .env
 ## Run
 - Local: `uvicorn app.main:app --reload`
 - Docker Compose: `docker compose up --build`
+- Helper scripts:
+  - `./scripts/start.sh`  (docker compose up)
+  - `./scripts/clear.sh`  (docker compose down -v)
 
 ## First-time quickstart
 1) Create `.env` (use the example below and add your real `OPENROUTER_API_KEY`).
@@ -49,6 +53,12 @@ source scripts/export_env.sh .env
   - Body: `{"field_type": "text", "value": "Acme Corp", "context": "Company description"}`
   - Response: `{"status": "success" | "objection", "message": "..." }`
 
+### Supported field types
+- `valid1`: expects 11 digits (PESEL-like). LLM decides success/objection based on digit-only + length rule.
+- `valid2`: letters only (A-Z + Polish diacritics), must start with uppercase. LLM enforces rule.
+- `valid3`: classify job/description into {dentist, hairdresser, other}. If not dentist/hairdresser → objection with hint.
+- Legacy/generic types remain: text, email, phone, number, select.
+
 ## OpenAPI export
 ```bash
 python scripts/export_openapi.py
@@ -60,6 +70,8 @@ File `openapi.json` will appear in repo root (gitignored).
 ./scripts/test.sh          # runs unit + integration
 # or scope:
 PYTEST_TARGET=tests/unit ./scripts/test.sh
+# interactive selector + logs in ./logs:
+./scripts/tests.sh
 ```
 
 ## CI

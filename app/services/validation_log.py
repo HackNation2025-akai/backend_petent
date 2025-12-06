@@ -22,7 +22,7 @@ async def log_validation(
         field_type=field_type,
         value_hash=_hash_value(value),
         status=result.status,
-        message=result.message,
+        message=result.justification,
     )
     session.add(record)
     await session.commit()
