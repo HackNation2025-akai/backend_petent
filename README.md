@@ -34,6 +34,9 @@ source scripts/export_env.sh .env
 ## Run
 - Local: `uvicorn app.main:app --reload`
 - Docker Compose: `docker compose up --build`
+- Helper scripts:
+  - `./scripts/start.sh`  (docker compose up)
+  - `./scripts/clear.sh`  (docker compose down -v)
 
 ## First-time quickstart
 1) Create `.env` (use the example below and add your real `OPENROUTER_API_KEY`).
@@ -66,6 +69,8 @@ File `openapi.json` will appear in repo root (gitignored).
 ./scripts/test.sh          # runs unit + integration
 # or scope:
 PYTEST_TARGET=tests/unit ./scripts/test.sh
+# interactive selector + logs in ./logs:
+./scripts/tests.sh
 ```
 
 ## CI

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
 
 mkdir -p logs
@@ -30,16 +31,16 @@ LOG_FILE="logs/pytest_$(date +%Y%m%d_%H%M%S).log"
 
 case "$choice" in
   1)
-    CMD=(env PYTEST_TARGET=tests/unit ./scripts/test.sh "$@")
+    CMD=(env PYTEST_TARGET=tests/unit "$ROOT/scripts/test.sh" "$@")
     ;;
   2)
-    CMD=(env PYTEST_TARGET=tests/integration ./scripts/test.sh -m "not live_api" "$@")
+    CMD=(env PYTEST_TARGET=tests/integration "$ROOT/scripts/test.sh" -m "not live_api" "$@")
     ;;
   3)
-    CMD=(env PYTEST_TARGET=tests/integration ./scripts/test.sh -m live_api "$@")
+    CMD=(env RUN_LIVE_API=1 PYTEST_TARGET=tests/integration "$ROOT/scripts/test.sh" -m live_api "$@")
     ;;
   4)
-    CMD=(./scripts/test.sh "$@")
+    CMD=(env RUN_LIVE_API=1 "$ROOT/scripts/test.sh" "$@")
     ;;
   *)
     echo "Invalid choice" >&2
