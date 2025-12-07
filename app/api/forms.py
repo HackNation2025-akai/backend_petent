@@ -23,7 +23,7 @@ from app.services.form_service import (
     submit_form,
     validate_form,
 )
-from app.services.pdf_export import generate_ewyp_pdf
+from app.services.pdf_export import generate_ewyp_pdf, generate_notification_pdf
 
 router = APIRouter()
 
@@ -127,14 +127,31 @@ async def get_form_version(
 async def get_form_pdf(
     session_id: uuid.UUID,
     version: int,
-    _session=Depends(get_current_session),  # noqa: B008
-    db: AsyncSession = Depends(get_session),  # noqa: B008
+    db: AsyncSession = Depends(get_session),
 ) -> Response:
     record = await get_version(db, session_id, version)
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version not found")
     try:
         pdf_bytes = generate_ewyp_pdf(EWYPFormSchema(**record.payload))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+        ) from exc
+    return Response(content=pdf_bytes, media_type="application/pdf")
+
+
+@router.get("/sessions/{session_id}/forms/{version}/pdf-notification")
+async def get_form_notification_pdf(
+    session_id: uuid.UUID,
+    version: int,
+    db: AsyncSession = Depends(get_session),
+) -> Response:
+    record = await get_version(db, session_id, version)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version not found")
+    try:
+        pdf_bytes = generate_notification_pdf(EWYPFormSchema(**record.payload))
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
