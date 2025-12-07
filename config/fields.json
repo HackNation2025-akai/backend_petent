@@ -5,36 +5,55 @@
       "name": "pesel_strict",
       "description": "PESEL: dokładnie 11 cyfr.",
       "allowed_status": ["success", "objection"],
-      "allowed_terms": [],
-      "prompt": "Sprawdź czy wartość to dokładnie 11 cyfr (0-9). Jeśli nie, zwróć objection z krótkim uzasadnieniem po polsku."
-    },
+      "pattern": "^[0-9]{11}$",
+      "allowed_terms": []},
     {
       "name": "name_proper",
       "description": "Imię/Nazwisko: litery (PL), pierwsza litera wielka.",
       "allowed_status": ["success", "objection"],
-      "allowed_terms": [],
-      "prompt": "Sprawdź czy wartość zawiera tylko litery (w tym polskie) i zaczyna się wielką literą. Inaczej objection z krótkim powodem po polsku."
+      "pattern": "^[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+$",
+      "allowed_terms": []
     },
     {
       "name": "city_proper",
       "description": "Miejscowość: litery (PL), pierwsza litera wielka.",
       "allowed_status": ["success", "objection"],
-      "allowed_terms": [],
-      "prompt": "Sprawdź czy nazwa miejscowości zawiera tylko litery (w tym polskie) i zaczyna się wielką literą. Inaczej objection z krótkim powodem."
+      "pattern": "^[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?:[ -][A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+)*$",
+      "allowed_terms": []
     },
     {
       "name": "doc_number",
       "description": "Seria i numer dokumentu tożsamości.",
       "allowed_status": ["success", "objection"],
-      "allowed_terms": [],
-      "prompt": "Oceń, czy format wygląda na realny numer dokumentu (litery/cyfry, długość 5-12). Jeśli wygląda na losowy/za krótki/za długi, objection z krótkim powodem."
+      "pattern": "^[A-Za-z0-9]{5,12}$"
     },
     {
       "name": "phone_digits",
       "description": "Telefon: 7-15 cyfr.",
       "allowed_status": ["success", "objection"],
-      "allowed_terms": [],
-      "prompt": "Sprawdź czy numer ma 7-15 cyfr. Spacje/kreski dopuszczalne, ale po usunięciu ma zostać 7-15 cyfr. Inaczej objection z powodem."
+      "pattern": "^[0-9\\s-]{7,20}$",
+      "allowed_terms": []
+    },
+    {
+      "name": "street_text",
+      "description": "Ulica: min. 3 znaki, litery/cyfry, spacje, myślniki.",
+      "allowed_status": ["success", "objection"],
+      "pattern": "^[A-Z]{2,49}$",
+      "allowed_terms": []
+    },
+    {
+      "name": "house_number",
+      "description": "Numer domu: 1-4 cyfry i opcjonalna litera.",
+      "allowed_status": ["success", "objection"],
+      "pattern": "^[0-9]{1,4}[A-Za-z]?$",
+      "allowed_terms": []
+    },
+    {
+      "name": "postal_code_pl",
+      "description": "Kod pocztowy: format 00-000.",
+      "allowed_status": ["success", "objection"],
+      "pattern": "^[0-9]{2}-[0-9]{3}$",
+      "allowed_terms": []
     },
     {
       "name": "text_brief",
@@ -57,6 +76,9 @@
     "injured_person.first_name": "name_proper",
     "injured_person.last_name": "name_proper",
     "injured_address.city": "city_proper",
+    "injured_address.street": "street_text",
+    "injured_address.house_number": "house_number",
+    "injured_address.postal_code": "postal_code_pl",
     "injured_person.document_number": "doc_number",
     "injured_person.phone": "phone_digits",
     "accident_info.accident_place": "text_brief",
